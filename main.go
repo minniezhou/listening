@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -15,7 +16,7 @@ const queneName = "broker"
 
 func main() {
 	// connect to rabbit mq
-	conn, err := amqp.Dial("amqp://guest:guest@localhost")
+	conn, err := connectToRabbit()
 	if err != nil {
 		log.Panic("failed to connect to rabbit mq")
 	}
@@ -30,7 +31,26 @@ func main() {
 
 	c.consume()
 }
+func connectToRabbit() (*amqp.Connection, error) {
+	count := 1
+	backoff := time.Second
+	log.Println("Connecting to Rabbit...")
+	for {
+		conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+		if err != nil {
+			count++
+			backoff = time.Duration(count*count) * time.Second
+			log.Println("Rabit is not ready yet, backing off...")
+			time.Sleep(backoff)
+		} else {
+			return conn, nil
+		}
 
+		if count > 10 {
+			return nil, err
+		}
+	}
+}
 func declareChannel(conn *amqp.Connection) (*amqp.Channel, error) {
 	ch, err := conn.Channel()
 	if err != nil {

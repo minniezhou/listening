@@ -31,7 +31,7 @@ func (c *Config) consume() {
 
 	go func() {
 		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
+			_ = c.handleEvents(d)
 		}
 	}()
 
