@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -49,6 +50,7 @@ type sendType struct {
 }
 
 func (c *Config) handleEvents(delivery amqp.Delivery) error {
+	fmt.Println("handing events...")
 	var message requestType
 	err := json.Unmarshal(delivery.Body, &message)
 	if err != nil {
@@ -59,9 +61,31 @@ func (c *Config) handleEvents(delivery amqp.Delivery) error {
 		{
 			return c.handleAuthorization(message.Auth)
 		}
+	case Logging:
+		{
+			return c.handleLogging(message.Log)
+		}
 	default:
 		return errors.New("Unknown events")
 	}
+}
+
+func (c *Config) handleLogging(request logType) error {
+	postBody, _ := json.Marshal(request)
+	responseBody := bytes.NewBuffer(postBody)
+	resp, err := http.Post("http://localhost:4321/log", "application/json", responseBody)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var payloadfromService jsonResponse
+	err = json.NewDecoder(resp.Body).Decode(&payloadfromService)
+	if err != nil {
+		log.Println("log failed")
+		return nil
+	}
+	log.Println("Log via RabitQP succeeded!")
+	return nil
 }
 
 func (c *Config) handleAuthorization(request authType) error {
