@@ -11,6 +11,11 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+const (
+	AUTHENTICATION_SERVICE = "localhost"
+	LOGGING_SERVICE        = "localhost"
+)
+
 type jsonResponse struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
@@ -73,7 +78,8 @@ func (c *Config) handleEvents(delivery amqp.Delivery) error {
 func (c *Config) handleLogging(request logType) error {
 	postBody, _ := json.Marshal(request)
 	responseBody := bytes.NewBuffer(postBody)
-	resp, err := http.Post("http://localhost:4321/log", "application/json", responseBody)
+	log_url := getEnv("LOGGING_SERVICE", LOGGING_SERVICE)
+	resp, err := http.Post("http://"+log_url+":4321/log", "application/json", responseBody)
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,8 @@ func (c *Config) handleLogging(request logType) error {
 func (c *Config) handleAuthorization(request authType) error {
 	postBody, _ := json.Marshal(request)
 	responseBody := bytes.NewBuffer(postBody)
-	resp, err := http.Post("http://localhost:80/auth", "application/json", responseBody)
+	auth_url := getEnv("AUTHENTICATION_SERVICE", AUTHENTICATION_SERVICE)
+	resp, err := http.Post("http://"+auth_url+":80/auth", "application/json", responseBody)
 	if err != nil {
 		return err
 	}
